@@ -22,11 +22,11 @@ NOTE:        "Easy Run Java" supports passed properties with -p to be instance s
              "Easy Run Java" will have its own copy of properties file.
 
 Example:
-easyrunjava -p .,./dependency -m user.name@xyz.com com.example.HelloWorld
+`easyrunjava -p .,./dependency -m user.name@xyz.com com.example.HelloWorld`
 
 In this case we are trying to run 'com.example.HelloWorld'
 '.' contains HelloWorld-1.1.0-SNAPSHOT.jar ./dependency/ contains dependency jars
 
-easyrunjava -p ./HelloWorld-1.1.0-SNAPSHOT.jar,./dependency -m user.name@xyz.com com.example.HelloWorld
+'easyrunjava -p ./HelloWorld-1.1.0-SNAPSHOT.jar,./dependency -m user.name@xyz.com com.example.HelloWorld'
  generate the same results as above one
 

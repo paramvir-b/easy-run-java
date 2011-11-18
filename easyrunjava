@@ -66,10 +66,10 @@ usage()
   printf "\nNOTE:        \"$APP_NAME\" supports passed properties with -p to be instance specific. Which means that every instance of "
   printf "\n             \"$APP_NAME\" will have its own copy of properties file."
   printf "\n\nExample:"
-  printf "\neasyrunjava -p .,./dependency -m user.name@xyz.com com.example.HelloWorld"
+  printf "\n\`easyrunjava -p .,./dependency -m user.name@xyz.com com.example.HelloWorld\`"
   printf "\n\nIn this case we are trying to run \'com.example.HelloWorld\'"
   printf "\n\'.\' contains HelloWorld-1.1.0-SNAPSHOT.jar ./dependency/ contains dependency jars"
-  printf "\n\neasyrunjava -p ./HelloWorld-1.1.0-SNAPSHOT.jar,./dependency -m user.name@xyz.com com.example.HelloWorld"
+  printf "\n\n\'easyrunjava -p ./HelloWorld-1.1.0-SNAPSHOT.jar,./dependency -m user.name@xyz.com com.example.HelloWorld\'"
   printf "\n generate the same results as above one"
   printf "\n\n"
 }
