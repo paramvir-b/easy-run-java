@@ -1,4 +1,3 @@
-Class Name containing main need to be specified.
 Easy Run Java v1.0.2_beta1 - (v1.0.2_beta1)
 --------------------------------------------
 Run Java easily from shell command
