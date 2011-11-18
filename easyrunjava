@@ -1,0 +1,286 @@
+#!/usr/bin/env ksh
+#############################################################
+###    NAME:            Paramvir Bali
+###
+###    DATE CREATED:    2010/12/14
+###
+###    INPUT:
+###
+###    OUTPUT:
+###
+###    DESCRIPTION:     Easily running Utility to run java code
+###                     Adds the dependencies
+###                     Doesnot support recursive adding of jars
+###    LICENCE          Any one can use it for any reason 
+###                     personal or comercial
+#############################################################
+
+APP_NAME="Easy Run Java"
+APP_VERSION="v1.0.2_beta1"
+APP_FULL_VERSION="v1.0.2_beta1"
+APP_EXEC_NAME="easyrunjava"
+
+EASY_RUN_JAVA_DEBUG=""
+
+### Draws the line
+draw_line()
+{
+  typeset len=$1;
+  typeset i=0;
+
+  while (( i < len ))
+  do
+    printf "-"
+    i=$((i+1));
+  done
+}
+
+NUM_OF_CHARS=`echo $APP_NAME $APP_VERSION - \($APP_FULL_VERSION\) | wc -c`
+APP_NAME_UNDERLINE=`draw_line $NUM_OF_CHARS`
+
+usage()
+{
+  TAB_WIDTH="  "
+  TAB_WIDTH2=${TAB_WIDTH}${TAB_WIDTH}
+  TAB_WIDTH4=${TAB_WIDTH2}${TAB_WIDTH2}
+  TAB_WIDTH8=${TAB_WIDTH4}${TAB_WIDTH4}
+
+  echo $APP_NAME $APP_VERSION - \($APP_FULL_VERSION\)
+  echo $APP_NAME_UNDERLINE
+  print Run Java easily from shell command
+  printf "\nUsage: $APP_EXEC_NAME [-c <jar_name/jar_dir>,<jar_name/jar_dir>...] [-m <email_id1>,<email_id2>...] [-p <prop_file1>,<prop_file2>...] class_name"
+  printf "\n\n"
+  printf "\n-c           Comma separated list of jar file names or jar dirs. Jar Name is added to the class path as is."
+  printf "\n             If Jar Dir is specified then it will add all Jars under that folder. SUBFOLDERS ARE NOT SUPPORTED"
+  printf "\n-m           Comman separated list of email ids who will recieve mail if \"$APP_NAME\" fails"
+  printf "\n             Whether -m option is specified or not, the error is propagated to the caller, so that caller can also handle it"
+  printf "\n-p           Additional properties files which will be processed for evn variables."
+  printf "\n             This feature will help pass evn variables to java program using java properties."
+  printf "\n             Properties file can contain shell evn variables as well as any complex shell expression which shell can parse"
+  printf "\n             and rest it is same as normal java properties file. Example:"
+  printf "\n               com.test.env.tmpdir=\$TMPDIR"
+  printf "\nclass_name   Fully qualified java class name containing the main function"
+  printf "\n-s           Stub mode where it will not run the actual java program but prints everything else."
+  printf "\n             Used for debugging and also for sanity testing the evn before running actual job."
+  printf "\n"
+  printf "\nNOTE:        \"$APP_NAME\" supports passed properties with -p to be instance specific. Which means that every instance of "
+  printf "\n             \"$APP_NAME\" will have its own copy of properties file."
+  printf "\n\nExample:"
+  printf "\neasyrunjava -p .,./dependency -m user.name@xyz.com com.example.HelloWorld"
+  printf "\n\nIn this case we are trying to run \'com.example.HelloWorld\'"
+  printf "\n\'.\' contains HelloWorld-1.1.0-SNAPSHOT.jar ./dependency/ contains dependency jars"
+  printf "\n\neasyrunjava -p ./HelloWorld-1.1.0-SNAPSHOT.jar,./dependency -m user.name@xyz.com com.example.HelloWorld"
+  printf "\n generate the same results as above one"
+  printf "\n\n"
+}
+
+### Appends the argument to the CP variable
+add_class_path()
+{
+  if [[ $CP == "" ]]; then
+    CP=${1}
+  else
+    CP=${CP}:${1}
+  fi
+}
+
+### Sends the email
+sendmail()
+{
+  typeset mail_file=$1
+  typeset sub=$2
+  typeset msg_file=$3
+  typeset recp=$4
+
+  if [[ $recp == "" ]]; then
+    echo No mail to send
+    return 
+  fi 
+
+  cat > $mail_file << !
+$APP_NAME - $APP_FULL_VERSION - Report
+----------------------------------------------------------------------------------
+!
+  cat $msg_file >> $mail_file 
+  cat $mail_file | mailx -s "$APP_NAME - $sub" "$recp"
+
+}
+
+### Brain of this script which will run the java code
+easyrunjava()
+{
+  $EASY_RUN_JAVA_DEBUG
+  typeset JAVA_UTIL=java
+  typeset java_class_to_run=$1
+  typeset cp_list
+  typeset mail_list
+  typeset prop_list
+  typeset temp_dir
+  typeset prop_dir
+  typeset log_dir
+  typeset mail_log_file
+  typeset error_log_file
+  typeset stub_mode="off"
+
+  ### Parsing the arguments
+  while getopts 'c:p:m:sh' OPTION
+  do
+    case $OPTION in
+    c)
+      cp_list="$OPTARG"
+      ;;
+    m)
+      mail_list="$OPTARG"
+      ;;
+    p)
+      prop_list="$OPTARG"
+      ;;
+    s)
+      stub_mode="on"
+      echo "Running in Stub mode"
+      ;;
+    h)
+      usage
+      exit 2
+      ;;
+    ?)
+      usage
+      exit 2
+      ;;
+    esac
+  done
+  shift $(($OPTIND - 1))
+
+  java_class_to_run=$1 
+
+  if [[ $java_class_to_run == "" ]]; then
+    echo "Class Name containing main need to be specified."
+    usage
+    exit 2
+  fi
+
+  ### If no issue with args move below
+
+  ### Setting the env
+  temp_dir=${TMPDIR:-.}
+  temp_dir=$temp_dir/easy_run_java.$$
+  prop_dir=$temp_dir/properties
+  log_dir=$temp_dir/log
+  mkdir -p $prop_dir $log_dir
+  if [[ $? != "0" ]]; then
+    mail_error="Critical Error occured while making dir"
+    echo $mail_error
+    if [[ $mail_list != "" ]]; then
+      echo $mail_error | mailx -s "$mail_error in $java_class_to_run" "$mail_list"
+    fi
+    exit 1;
+  fi
+  
+  mail_log_file=$log_dir/mail.log
+  error_log_file=$log_dir/error.log
+
+  echo java_class_to_run=$java_class_to_run
+  > $error_log_file
+
+  if [[ $cp_list != "" ]]; then
+    ### Preparing Class Path to use
+    echo Preparing Class Path
+    old_ifs=$IFS
+    IFS=,
+    set $cp_list
+    IFS=$old_ifs
+
+    for CP_NAME
+    do
+      if [[ -d $CP_NAME ]]; then
+        add_class_path $CP_NAME
+        
+        for CP_DIR_FILE in `ls -d $CP_NAME/*.jar`
+        do
+          add_class_path $CP_DIR_FILE
+        done
+      else
+          add_class_path $CP_NAME
+      fi
+      echo
+    done
+    #echo Class Path created=$CP
+  fi
+
+  if [[ $prop_list != "" ]]; then
+    ### Processing properties files  
+    old_ifs=$IFS
+    IFS=,
+    set $prop_list
+    IFS=$old_ifs
+
+    for prop_file_full_name
+    do
+      prop_file_name=${prop_file_full_name##/*/}
+      prop_file_name=${prop_file_name##.*/}
+      cp $prop_file_full_name $prop_dir/${prop_file_name}.bkup
+      echo "Original Prop File : " $prop_dir//${prop_file_name}.bkup
+      echo "-----------------------------------------------------------------------------------------------"
+      cat $prop_dir//${prop_file_name}.bkup
+      print "\n\n" 
+      cat > $prop_dir//${prop_file_name}.template << !
+cat << EOF
+!
+      cat $prop_dir//${prop_file_name}.bkup >> $prop_dir//${prop_file_name}.template
+      cat >> $prop_dir//${prop_file_name}.template << !
+
+EOF
+!
+      . $prop_dir//${prop_file_name}.template > $prop_dir//${prop_file_name}
+    
+      echo "Processed Prop File : " $prop_dir//${prop_file_name} 
+      echo "-----------------------------------------------------------------------------------------------"
+      cat $prop_dir//${prop_file_name} 
+      print "\n\n" 
+      rm $prop_dir//${prop_file_name}.bkup $prop_dir//${prop_file_name}.template
+    done
+
+    echo prop_list=$prop_list
+    if [[ $prop_list != "" ]]; then
+      #echo Adding $prop_dir/ to path as extra properties files are provided
+      CP=$prop_dir:$CP
+    fi
+  fi
+
+  print "Class Path used=$CP\n\n"
+  echo Running the java code 
+  echo --------------------------------------
+  typeset command_to_run;
+  if [[ $stub_mode != "on" ]]; then
+    if [[ $CP != "" ]]; then
+      #$JAVA_UTIL -cp $CP $java_class_to_run 2>>$error_log_file
+      command_to_run="$JAVA_UTIL -cp $CP $java_class_to_run"
+      ret_code=$?
+    else
+      #$JAVA_UTIL $java_class_to_run 2>>$error_log_file
+      command_to_run="$JAVA_UTIL $java_class_to_run"
+      ret_code=$?
+    fi
+    echo command_to_run=$command_to_run
+    $command_to_run
+    ret_code=$?
+    #cat $error_log_file
+    echo ret_code=$ret_code
+
+    if [[ $ret_code != "0" ]]; then
+      sendmail $mail_log_file "Error Occurred while running: $java_class_to_run" \
+          "$error_log_file"  "$mail_list"
+    fi
+  fi
+
+  rm -rf $temp_dir
+  if [[ $ret_code != "0" ]]; then
+    exit $ret_code
+  fi
+}
+
+########################
+### MAIN,main
+########################
+
+easyrunjava $*
