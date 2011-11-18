@@ -69,7 +69,7 @@ usage()
   printf "\n\`easyrunjava -p .,./dependency -m user.name@xyz.com com.example.HelloWorld\`"
   printf "\n\nIn this case we are trying to run \'com.example.HelloWorld\'"
   printf "\n\'.\' contains HelloWorld-1.1.0-SNAPSHOT.jar ./dependency/ contains dependency jars"
-  printf "\n\n\'easyrunjava -p ./HelloWorld-1.1.0-SNAPSHOT.jar,./dependency -m user.name@xyz.com com.example.HelloWorld\'"
+  printf "\n\n\`easyrunjava -p ./HelloWorld-1.1.0-SNAPSHOT.jar,./dependency -m user.name@xyz.com com.example.HelloWorld\`"
   printf "\n generate the same results as above one"
   printf "\n\n"
 }
