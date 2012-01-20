@@ -30,8 +30,8 @@
 ###############################################################################
 
 APP_NAME="Easy Run Java"
-APP_VERSION="v1.0.2_beta1"
-APP_FULL_VERSION="v1.0.2_beta1"
+APP_VERSION="v1.0.2"
+APP_FULL_VERSION="v1.0.2"
 APP_EXEC_NAME="easyrunjava"
 
 # Set this variable to 'set -x' for debugging
@@ -63,7 +63,7 @@ usage()
   echo $APP_NAME $APP_VERSION - \($APP_FULL_VERSION\)
   echo $APP_NAME_UNDERLINE
   print Run Java easily from shell command
-  printf "\nUsage: $APP_EXEC_NAME [-c <jar_name/jar_dir>,<jar_name/jar_dir>...] [-m <email_id1>,<email_id2>...] [-p <prop_file1>,<prop_file2>...] class_name [args_to_program]"
+  printf "\nUsage: $APP_EXEC_NAME [-j <jvm args>] [-c <jar_name/jar_dir>,<jar_name/jar_dir>...] [-m <email_id1>,<email_id2>...] [-p <prop_file1>,<prop_file2>...] class_name [args_to_program]"
   printf "\n\n"
   printf "\n-c           Comma separated list of jar file names or jar dirs. Jar Name is added to the class path as is."
   printf "\n             If Jar Dir is specified then it will add all Jars under that folder. SUBFOLDERS ARE NOT SUPPORTED"
@@ -77,16 +77,16 @@ usage()
   printf "\nclass_name   Fully qualified java class name containing the main function"
   printf "\n-s           Stub mode where it will not run the actual java program but prints everything else."
   printf "\n             Used for debugging and also for sanity testing the evn before running actual job."
-  printf "\nJVM Args     JVM args are passed by setting EASY_RUN_JAVA_JVM_ARGS env variable. Still looking for some more elegant way to pass jvm args."
-  printf "\n             Example: export EASY_RUN_JAVA_JVM_ARGS=\"-Xms256m -Xmx512m\"";
+  printf "\n-j           JVM args are passed using \""
+  printf "\n             Example: -j \"-Xms256m -Xmx512m\"";
   printf "\n"
   printf "\nNOTE:        \"$APP_NAME\" supports passed properties with -p to be instance specific. Which means that every instance of "
   printf "\n             \"$APP_NAME\" will have its own copy of properties file."
   printf "\n\nExample:"
-  printf "\n\`easyrunjava -p .,./dependency -m user.name@xyz.com com.example.HelloWorld\`"
+  printf "\n\`easyrunjava -j \"-Xms256m -Xmx512m\" -p .,./dependency -m user.name@xyz.com com.example.HelloWorld\`"
   printf "\n\nIn this case we are trying to run \'com.example.HelloWorld\'"
   printf "\n\'.\' contains HelloWorld-1.1.0-SNAPSHOT.jar ./dependency/ contains dependency jars"
-  printf "\n\n\`easyrunjava -p ./HelloWorld-1.1.0-SNAPSHOT.jar,./dependency -m user.name@xyz.com com.example.HelloWorld\`"
+  printf "\n\n\`easyrunjava -j \"-Xms256m -Xmx512m\" -p ./HelloWorld-1.1.0-SNAPSHOT.jar,./dependency -m user.name@xyz.com com.example.HelloWorld\`"
   printf "\n generate the same results as above one"
   printf "\n\n"
 }
@@ -147,6 +147,7 @@ easyrunjava()
     case $OPTION in
     j)
       jvm_args="$OPTARG"
+      echo jvm_args=$jvm_args
       ;;
     c)
       cp_list="$OPTARG"
@@ -271,7 +272,6 @@ EOF
     fi
   fi
 
-  jvm_args=$EASY_RUN_JAVA_JVM_ARGS
   print "Class Path used=$CP\n\n"
   echo Running the java code 
   echo --------------------------------------
@@ -308,4 +308,4 @@ EOF
 ### MAIN,main
 ########################
 
-easyrunjava $*
+easyrunjava "$@"
