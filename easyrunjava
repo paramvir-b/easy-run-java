@@ -1,5 +1,5 @@
 #!/usr/bin/env ksh
-#############################################################
+###############################################################################
 ###    NAME:            Paramvir Bali
 ###
 ###    DATE CREATED:    2010/12/14
@@ -11,15 +11,30 @@
 ###    DESCRIPTION:     Easily running Utility to run java code
 ###                     Adds the dependencies
 ###                     Doesnot support recursive adding of jars
-###    LICENCE          Any one can use it for any reason 
-###                     personal or comercial
-#############################################################
+###############################################################################
+###   LICENCE          
+###   Copyright 2012 Paramvir Bali
+###
+###   Licensed under the Apache License, Version 2.0 (the "License");
+###   you may not use this file except in compliance with the License.
+###   You may obtain a copy of the License at
+###
+###       http://www.apache.org/licenses/LICENSE-2.0
+###
+###   Unless required by applicable law or agreed to in writing, software
+###   distributed under the License is distributed on an "AS IS" BASIS,
+###   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+###   See the License for the specific language governing permissions and
+###   limitations under the License.
+###                     
+###############################################################################
 
 APP_NAME="Easy Run Java"
 APP_VERSION="v1.0.2_beta1"
 APP_FULL_VERSION="v1.0.2_beta1"
 APP_EXEC_NAME="easyrunjava"
 
+# Set this variable to 'set -x' for debugging
 EASY_RUN_JAVA_DEBUG=""
 
 ### Draws the line
@@ -48,7 +63,7 @@ usage()
   echo $APP_NAME $APP_VERSION - \($APP_FULL_VERSION\)
   echo $APP_NAME_UNDERLINE
   print Run Java easily from shell command
-  printf "\nUsage: $APP_EXEC_NAME [-c <jar_name/jar_dir>,<jar_name/jar_dir>...] [-m <email_id1>,<email_id2>...] [-p <prop_file1>,<prop_file2>...] class_name"
+  printf "\nUsage: $APP_EXEC_NAME [-c <jar_name/jar_dir>,<jar_name/jar_dir>...] [-m <email_id1>,<email_id2>...] [-p <prop_file1>,<prop_file2>...] class_name [args_to_program]"
   printf "\n\n"
   printf "\n-c           Comma separated list of jar file names or jar dirs. Jar Name is added to the class path as is."
   printf "\n             If Jar Dir is specified then it will add all Jars under that folder. SUBFOLDERS ARE NOT SUPPORTED"
@@ -62,6 +77,8 @@ usage()
   printf "\nclass_name   Fully qualified java class name containing the main function"
   printf "\n-s           Stub mode where it will not run the actual java program but prints everything else."
   printf "\n             Used for debugging and also for sanity testing the evn before running actual job."
+  printf "\nJVM Args     JVM args are passed by setting EASY_RUN_JAVA_JVM_ARGS env variable. Still looking for some more elegant way to pass jvm args."
+  printf "\n             Example: export EASY_RUN_JAVA_JVM_ARGS=\"-Xms256m -Xmx512m\"";
   printf "\n"
   printf "\nNOTE:        \"$APP_NAME\" supports passed properties with -p to be instance specific. Which means that every instance of "
   printf "\n             \"$APP_NAME\" will have its own copy of properties file."
@@ -112,6 +129,8 @@ easyrunjava()
   $EASY_RUN_JAVA_DEBUG
   typeset JAVA_UTIL=java
   typeset java_class_to_run=$1
+  typeset jvm_args
+  typeset command_args
   typeset cp_list
   typeset mail_list
   typeset prop_list
@@ -123,9 +142,12 @@ easyrunjava()
   typeset stub_mode="off"
 
   ### Parsing the arguments
-  while getopts 'c:p:m:sh' OPTION
+  while getopts 'c:p:m:j:sh' OPTION
   do
     case $OPTION in
+    j)
+      jvm_args="$OPTARG"
+      ;;
     c)
       cp_list="$OPTARG"
       ;;
@@ -151,7 +173,9 @@ easyrunjava()
   done
   shift $(($OPTIND - 1))
 
-  java_class_to_run=$1 
+  ### First remaining arg is the class name and rest 
+  ### are argument to program
+  java_class_to_run="$*"
 
   if [[ $java_class_to_run == "" ]]; then
     echo "Class Name containing main need to be specified."
@@ -247,6 +271,7 @@ EOF
     fi
   fi
 
+  jvm_args=$EASY_RUN_JAVA_JVM_ARGS
   print "Class Path used=$CP\n\n"
   echo Running the java code 
   echo --------------------------------------
@@ -254,11 +279,11 @@ EOF
   if [[ $stub_mode != "on" ]]; then
     if [[ $CP != "" ]]; then
       #$JAVA_UTIL -cp $CP $java_class_to_run 2>>$error_log_file
-      command_to_run="$JAVA_UTIL -cp $CP $java_class_to_run"
+      command_to_run="$JAVA_UTIL "$jvm_args" -cp $CP $java_class_to_run"
       ret_code=$?
     else
       #$JAVA_UTIL $java_class_to_run 2>>$error_log_file
-      command_to_run="$JAVA_UTIL $java_class_to_run"
+      command_to_run="$JAVA_UTIL "$jvm_args" $java_class_to_run"
       ret_code=$?
     fi
     echo command_to_run=$command_to_run
