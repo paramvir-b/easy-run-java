@@ -7,6 +7,8 @@
 ###    INPUT:
 ###
 ###    OUTPUT:
+###    
+###    URL:             https://github.com/paramvir-b/easy-run-java
 ###
 ###    DESCRIPTION:     Easily running Utility to run java code
 ###                     Adds the dependencies
@@ -30,8 +32,8 @@
 ###############################################################################
 
 APP_NAME="Easy Run Java"
-APP_VERSION="v1.0.2"
-APP_FULL_VERSION="v1.0.2"
+APP_VERSION="v1.0.3"
+APP_FULL_VERSION="v1.0.3"
 APP_EXEC_NAME="easyrunjava"
 
 # Set this variable to 'set -x' for debugging
@@ -60,35 +62,48 @@ usage()
   TAB_WIDTH4=${TAB_WIDTH2}${TAB_WIDTH2}
   TAB_WIDTH8=${TAB_WIDTH4}${TAB_WIDTH4}
 
-  echo $APP_NAME $APP_VERSION - \($APP_FULL_VERSION\)
-  echo $APP_NAME_UNDERLINE
-  print Run Java easily from shell command
-  printf "\nUsage: $APP_EXEC_NAME [-j <jvm args>] [-c <jar_name/jar_dir>,<jar_name/jar_dir>...] [-m <email_id1>,<email_id2>...] [-p <prop_file1>,<prop_file2>...] class_name [args_to_program]"
-  printf "\n\n"
-  printf "\n-c           Comma separated list of jar file names or jar dirs. Jar Name is added to the class path as is."
-  printf "\n             If Jar Dir is specified then it will add all Jars under that folder. SUBFOLDERS ARE NOT SUPPORTED"
-  printf "\n-m           Comman separated list of email ids who will recieve mail if \"$APP_NAME\" fails"
-  printf "\n             Whether -m option is specified or not, the error is propagated to the caller, so that caller can also handle it"
-  printf "\n-p           Additional properties files which will be processed for evn variables."
-  printf "\n             This feature will help pass evn variables to java program using java properties."
-  printf "\n             Properties file can contain shell evn variables as well as any complex shell expression which shell can parse"
-  printf "\n             and rest it is same as normal java properties file. Example:"
-  printf "\n               com.test.env.tmpdir=\$TMPDIR"
-  printf "\nclass_name   Fully qualified java class name containing the main function"
-  printf "\n-s           Stub mode where it will not run the actual java program but prints everything else."
-  printf "\n             Used for debugging and also for sanity testing the evn before running actual job."
-  printf "\n-j           JVM args are passed using \""
-  printf "\n             Example: -j \"-Xms256m -Xmx512m\"";
-  printf "\n"
-  printf "\nNOTE:        \"$APP_NAME\" supports passed properties with -p to be instance specific. Which means that every instance of "
-  printf "\n             \"$APP_NAME\" will have its own copy of properties file."
-  printf "\n\nExample:"
-  printf "\n\`easyrunjava -j \"-Xms256m -Xmx512m\" -p .,./dependency -m user.name@xyz.com com.example.HelloWorld\`"
-  printf "\n\nIn this case we are trying to run \'com.example.HelloWorld\'"
-  printf "\n\'.\' contains HelloWorld-1.1.0-SNAPSHOT.jar ./dependency/ contains dependency jars"
-  printf "\n\n\`easyrunjava -j \"-Xms256m -Xmx512m\" -p ./HelloWorld-1.1.0-SNAPSHOT.jar,./dependency -m user.name@xyz.com com.example.HelloWorld\`"
-  printf "\n generate the same results as above one"
-  printf "\n\n"
+  cat << !
+$APP_NAME $APP_VERSION - ($APP_FULL_VERSION)
+$APP_NAME_UNDERLINE
+Run Java easily from shell command
+
+Usage: easyrunjava [-j <jvm args>] [-c <jar_name/jar_dir>,<jar_name/jar_dir>...] [-m <email_id1>,<email_id2>...] [-p <prop_file1>,<prop_file2>...] class_name [args_to_program]
+
+
+    -c           Comma separated list of jar file names or jar dirs. Jar Name is added to the class path as is.
+                 If Jar Dir is specified then it will add all Jars under that folder. SUBFOLDERS ARE NOT SUPPORTED
+    -m           Comman separated list of email ids who will recieve mail if "Easy Run Java" fails
+                 Whether -m option is specified or not, the error is propagated to the caller, so that caller can also handle it
+    -p           Additional properties files which will be processed for evn variables.
+                 This feature will help pass evn variables to java program using java properties.
+                 Properties file can contain shell evn variables as well as any complex shell expression which shell can parse
+                 and rest it is same as normal java properties file.
+                 Example:
+                   com.test.env.tmpdir=\$TMPDIR
+    class_name   Fully qualified java class name containing the main function
+    -s           Stub mode where it will not run the actual java program but prints everything else.
+                 Used for debugging and also for sanity testing the evn before running actual job.
+    -j               JVM args are passed using "
+                 Example:
+                   -j "-Xms256m -Xmx512m"
+
+NOTE:        "Easy Run Java" supports passed properties with -p to be instance specific. Which means that every instance of 
+             "Easy Run Java" will have its own copy of properties file.
+
+Example:
+
+    > easyrunjava -j "-Xms256m -Xmx512m" -p .,./dependency -m user.name@xyz.com com.example.HelloWorld
+
+In this case we are trying to run 'com.example.HelloWorld'
+'.' contains HelloWorld-1.1.0-SNAPSHOT.jar ./dependency/ contains dependency jars
+
+    > easyrunjava -j "-Xms256m -Xmx512m" -p ./HelloWorld-1.1.0-SNAPSHOT.jar,./dependency -m user.name@xyz.com com.example.HelloWorld
+ generate the same results as above one
+    
+    > easyrunjava -j "-Xms256m -Xmx512m" -p ./HelloWorld-1.1.0-SNAPSHOT.jar,./dependency -m user.name@xyz.com com.example.HelloWorld -a "arg with space"
+
+!
+
 }
 
 ### Appends the argument to the CP variable
@@ -128,7 +143,8 @@ easyrunjava()
 {
   $EASY_RUN_JAVA_DEBUG
   typeset JAVA_UTIL=java
-  typeset java_class_to_run=$1
+  typeset java_class_to_run_log
+  typeset -a java_class_to_run
   typeset jvm_args
   typeset command_args
   typeset cp_list
@@ -176,9 +192,10 @@ easyrunjava()
 
   ### First remaining arg is the class name and rest 
   ### are argument to program
-  java_class_to_run="$*"
+  set -A java_class_to_run "$@"
+  java_class_to_run_log="$@"
 
-  if [[ $java_class_to_run == "" ]]; then
+  if [[ $java_class_to_run_log == "" ]]; then
     echo "Class Name containing main need to be specified."
     usage
     exit 2
@@ -196,7 +213,7 @@ easyrunjava()
     mail_error="Critical Error occured while making dir"
     echo $mail_error
     if [[ $mail_list != "" ]]; then
-      echo $mail_error | mailx -s "$mail_error in $java_class_to_run" "$mail_list"
+      echo $mail_error | mailx -s "$mail_error in $java_class_to_run_log" "$mail_list"
     fi
     exit 1;
   fi
@@ -204,7 +221,7 @@ easyrunjava()
   mail_log_file=$log_dir/mail.log
   error_log_file=$log_dir/error.log
 
-  echo java_class_to_run=$java_class_to_run
+  echo java_class_to_run_log=$java_class_to_run_log
   > $error_log_file
 
   if [[ $cp_list != "" ]]; then
@@ -279,21 +296,21 @@ EOF
   if [[ $stub_mode != "on" ]]; then
     if [[ $CP != "" ]]; then
       #$JAVA_UTIL -cp $CP $java_class_to_run 2>>$error_log_file
-      command_to_run="$JAVA_UTIL "$jvm_args" -cp $CP $java_class_to_run"
+      command_to_run="$JAVA_UTIL "$jvm_args" -cp $CP"
       ret_code=$?
     else
       #$JAVA_UTIL $java_class_to_run 2>>$error_log_file
-      command_to_run="$JAVA_UTIL "$jvm_args" $java_class_to_run"
+      command_to_run="$JAVA_UTIL "$jvm_args
       ret_code=$?
     fi
-    echo command_to_run=$command_to_run
-    $command_to_run
+    echo Running $command_to_run "${java_class_to_run[@]}"
+    $command_to_run "${java_class_to_run[@]}"
     ret_code=$?
     #cat $error_log_file
     echo ret_code=$ret_code
 
     if [[ $ret_code != "0" ]]; then
-      sendmail $mail_log_file "Error Occurred while running: $java_class_to_run" \
+      sendmail $mail_log_file "Error Occurred while running: $java_class_to_run_log" \
           "$error_log_file"  "$mail_list"
     fi
   fi
